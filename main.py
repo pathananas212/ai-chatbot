@@ -1,41 +1,62 @@
-from groq import Groq
+from src.chatbot import Chatbot
+from src.logger import get_logger
 
-client=Groq(api_key="YOUR_API_KEY")
+logger = get_logger(__name__)
 
-conversation_history=[]             #this is the memory-->histry
+COMMANDS = {
+    "/quit": "Exit the chatbot",
+    "/reset": "Clear conversation history",
+    "/help": "Show available commands",
+}
 
-conversation_history.append({'role':'system','content':"Acts as a president Donald Trump"})
+
+def print_help() -> None:
+    print("\nAvailable commands:")
+    for cmd, desc in COMMANDS.items():
+        print(f"  {cmd:10} — {desc}")
+    print()
 
 
-while True:
-    
-    user_input=input("Type a message:")
-    
-   
-    
-    if user_input.lower()=='quit':
-        break
-    
-    else:
-        conversation_history.append({'role':'user',"content":user_input})
+def main() -> None:
+    print("=" * 50)
+    print("  AI Chatbot  |  Powered by Groq")
+    print("  Type /help for commands, /quit to exit")
+    print("=" * 50)
 
-        response=client.chat.completions.create(
-            
-            model="llama-3.1-8b-instant",
-            messages=conversation_history   #full history send to groq api
-                
-                # it's dictionary  which we are sendind to groq api
-                # role-->> the user is us ,it's not the AI
-                # content--->>> we are asking groq api, whoa are you?
-            
-            
-        )
-        
+    try:
+        bot = Chatbot()
+    except EnvironmentError as e:
+        print(f"\nConfiguration error: {e}\n")
+        return
 
-# print(response.choices[0].message.content)
-    
-    print(response.choices[0].message.content)   # AI reads everthing and replies
-    
-    AI_output=response.choices[0].message.content
-    conversation_history.append({'role':'assistant','content':AI_output})          # this reply saves to history too
-  
+    while True:
+        try:
+            user_input = input("\nYou: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye!")
+            break
+
+        if not user_input:
+            continue
+
+        if user_input == "/quit":
+            print("Goodbye!")
+            break
+        elif user_input == "/reset":
+            bot.reset()
+            print("Conversation reset.")
+            continue
+        elif user_input == "/help":
+            print_help()
+            continue
+
+        try:
+            reply = bot.chat(user_input)
+            print(f"\nAssistant: {reply}")
+        except Exception as e:
+            print(f"\nError: {e}")
+            logger.exception("Unexpected error during chat")
+
+
+if __name__ == "__main__":
+    main()
